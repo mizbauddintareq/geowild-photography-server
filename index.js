@@ -22,6 +22,10 @@ async function run() {
       .db("geoWild-photography")
       .collection("services");
 
+    const reviewsCollection = client
+      .db("geoWild-photography")
+      .collection("reviews");
+
     //   Get limited services API
     app.get("/services", async (req, res) => {
       const query = {};
@@ -42,6 +46,41 @@ async function run() {
       const query = { _id: ObjectId(id) };
       const service = await servicesCollection.findOne(query);
       res.send(service);
+    });
+
+    // Post Review API
+    app.post("/review", async (req, res) => {
+      const data = req.body;
+      const reviews = await reviewsCollection.insertOne(data);
+      res.send(reviews);
+    });
+
+    // Get reviews API
+    app.get("/reviews", async (req, res) => {
+      let query = {};
+      const service = req.query.service;
+      if (service) {
+        query = {
+          serviceName: service,
+        };
+      }
+      const cursor = reviewsCollection.find(query);
+      const reviews = await cursor.toArray();
+      res.send(reviews);
+    });
+
+    // Get my reviews API
+    app.get("/myReviews", async (req, res) => {
+      const email = req.query.email;
+      let query = {};
+      if (email) {
+        query = {
+          userEmail: email,
+        };
+      }
+      const cursor = reviewsCollection.find(query);
+      const myReviews = await cursor.toArray();
+      res.send(myReviews);
     });
   } finally {
   }
