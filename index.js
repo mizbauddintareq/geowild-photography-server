@@ -1,4 +1,5 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const cors = require("cors");
 require("dotenv").config();
@@ -15,6 +16,31 @@ const client = new MongoClient(uri, {
   useUnifiedTopology: true,
   serverApi: ServerApiVersion.v1,
 });
+
+// Create JWT
+app.post("/jwt", (req, res) => {
+  const user = req.body;
+  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+    expiresIn: "1d",
+  });
+  res.send({ token });
+});
+
+// verify JWT
+function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).send({ message: "unauthorize access" });
+  }
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+      return res.status(401).send({ message: "unauthorize access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
 
 async function run() {
   try {
@@ -78,8 +104,12 @@ async function run() {
     });
 
     // Get my reviews API
-    app.get("/myReviews", async (req, res) => {
+    app.get("/myReviews", verifyJWT, async (req, res) => {
       const email = req.query.email;
+      if (req.decoded.email !== email) {
+        return res.status(401).send({ message: "unauthorize access" });
+      }
+
       let query = {};
       if (email) {
         query = {
